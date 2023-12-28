@@ -1,0 +1,23 @@
+
+
+stages:          # List of stages for jobs, and their order of execution
+  - build
+  - deploy
+
+build-job:       # This job runs in the build stage, which runs first.
+  stage: build
+  tags: [shell]
+  script:
+    - echo "Compiling the code..."
+    - echo "Compile complete."
+    - docker run --rm -v $(pwd)/:/src -w /src dxkjyjy.cn/lib/python sh -c "pip install -r requirements.txt && pyinstaller -c alg_pod.py"
+  artifacts:
+    paths:
+      - dist
+
+
+deploy-job:      # This job runs in the deploy stage.
+  stage: deploy  # It only runs when *both* jobs in the test stage complete successfully.
+  script:
+    - echo "Deploying application..."
+    - echo "Application successfully deployed."
