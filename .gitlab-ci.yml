@@ -10,7 +10,7 @@ build-job:       # This job runs in the build stage, which runs first.
   script:
     - echo "Compiling the code..."
     - echo "Compile complete."
-    - docker run --rm -v $(pwd)/:/src -w /src dxkjyjy.cn/lib/python sh -c "proxychains pip install -r requirements.txt && pyinstaller -c alg_pod.py"
+    - docker run -u $(id -u):$(id -g) --rm -v $(pwd)/:/src -w /src dxkjyjy.cn/lib/python sh -c "proxychains pip install -r requirements.txt && pyinstaller -c alg_pod.py"
   artifacts:
     paths:
       - dist/alg_pod
