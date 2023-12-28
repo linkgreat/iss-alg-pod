@@ -13,11 +13,18 @@ build-job:       # This job runs in the build stage, which runs first.
     - docker run --rm -v $(pwd)/:/src -w /src dxkjyjy.cn/lib/python sh -c "proxychains pip install -r requirements.txt && pyinstaller -c alg_pod.py"
   artifacts:
     paths:
-      - dist
+      - dist/alg_pod
 
 
 deploy-job:      # This job runs in the deploy stage.
+  tags: [golang,docker]
   stage: deploy  # It only runs when *both* jobs in the test stage complete successfully.
+  artifacts:
+    paths:
+      - algbin.tar.gz
   script:
     - echo "Deploying application..."
     - echo "Application successfully deployed."
+    - ver=$(date +'%Y%m%d.%H%M%S')
+    - tar czpvf algbin.tar.gz -C dist/alg_pod .
+    - mc ./algbin.tar.gz ydn/gitlab-runner/iss-alg/algbin-${ver}.tar.gz
