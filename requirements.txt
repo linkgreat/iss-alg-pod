@@ -1,0 +1,53 @@
+altgraph @ file:///home/conda/feedstock_root/build_artifacts/altgraph_1695642967802/work
+Brotli @ file:///C:/Windows/Temp/abs_63l7912z0e/croots/recipe/brotli-split_1659616056886/work
+cachetools==5.3.2
+certifi @ file:///C:/b/abs_91u83siphd/croot/certifi_1700501720658/work/certifi
+cffi @ file:///C:/b/abs_924gv1kxzj/croot/cffi_1700254355075/work
+chardet==5.2.0
+charset-normalizer @ file:///tmp/build/80754af9/charset-normalizer_1630003229654/work
+click @ file:///C:/b/abs_f9ihnt72pu/croot/click_1698129847492/work
+cloudpickle @ file:///C:/b/abs_3796yxesic/croot/cloudpickle_1683040098851/work
+colorama @ file:///C:/b/abs_a9ozq0l032/croot/colorama_1672387194846/work
+cryptography @ file:///C:/b/abs_e8cnom_zw_/croot/cryptography_1702071486468/work
+cytoolz @ file:///C:/b/abs_d43s8lnb60/croot/cytoolz_1701723636699/work
+dask @ file:///C:/b/abs_59fkcimley/croot/dask-core_1683065223377/work
+docopt @ file:///C:/b/abs_d3qvsxazhu/croots/recipe/docopt_1663662414930/work
+fsspec @ file:///C:/b/abs_97mpfsesn0/croot/fsspec_1701286534629/work
+future @ file:///home/conda/feedstock_root/build_artifacts/future_1673596611778/work
+gmpy2 @ file:///C:/ci/gmpy2_1645456279018/work
+idna @ file:///C:/b/abs_bdhbebrioa/croot/idna_1666125572046/work
+imageio @ file:///C:/b/abs_3eijmwdodc/croot/imageio_1695996500830/work
+importlib-metadata @ file:///C:/b/abs_20ndzb2j6v/croot/importlib-metadata_1678997085534/work
+lazy_loader @ file:///C:/b/abs_3bn4_r4g42/croot/lazy_loader_1695850158046/work
+locket @ file:///C:/ci/locket_1652904093019/work
+mpmath @ file:///C:/b/abs_7833jrbiox/croot/mpmath_1690848321154/work
+networkx @ file:///C:/b/abs_e6gi1go5op/croot/networkx_1690562046966/work
+numpy @ file:///D:/bld/numpy_1687808486521/work
+opencv-python==4.8.1
+packaging @ file:///C:/b/abs_28t5mcoltc/croot/packaging_1693575224052/work
+paho-mqtt==1.6.1
+partd @ file:///C:/b/abs_46awex0fd7/croot/partd_1698702622970/work
+pefile @ file:///home/conda/feedstock_root/build_artifacts/pefile_1675867622763/work
+Pillow @ file:///D:/bld/pillow_1697423739715/work
+pipreqs==0.4.13
+py2exe==0.13.0.1
+pycparser @ file:///tmp/build/80754af9/pycparser_1636541352034/work
+pyinstall==0.1.4
+pyinstaller @ file:///D:/bld/pyinstaller_1702294438131/work
+pyinstaller-hooks-contrib @ file:///home/conda/feedstock_root/build_artifacts/pyinstaller-hooks-contrib_1697244900488/work
+pyOpenSSL @ file:///C:/b/abs_08f38zyck4/croot/pyopenssl_1690225407403/work
+PySocks @ file:///C:/ci/pysocks_1605287845585/work
+PyWavelets @ file:///C:/b/abs_a8r4b1511a/croot/pywavelets_1670425185881/work
+pywin32==306
+pywin32-ctypes @ file:///D:/bld/pywin32-ctypes_1695395077847/work
+PyYAML @ file:///C:/b/abs_782o3mbw7z/croot/pyyaml_1698096085010/work
+requests @ file:///C:/b/abs_316c2inijk/croot/requests_1690400295842/work
+scikit-image @ file:///C:/b/abs_2075zg1pia/croot/scikit-image_1682528361447/work
+scipy==1.9.1
+sympy @ file:///C:/b/abs_82njkonm7f/croot/sympy_1701397685028/work
+tifffile==2020.10.1
+toolz @ file:///C:/b/abs_cfvk6rc40d/croot/toolz_1667464080130/work
+urllib3 @ file:///C:/b/abs_9cmlsrm3ys/croot/urllib3_1698257595508/work
+win-inet-pton @ file:///C:/ci/win_inet_pton_1605306167264/work
+yarg==0.1.9
+zipp @ file:///C:/b/abs_b9jfdr908q/croot/zipp_1672387552360/work
