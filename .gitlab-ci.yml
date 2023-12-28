@@ -26,4 +26,4 @@ deploy-job:      # This job runs in the deploy stage.
     - echo "Deploying application..."
     - echo "Application successfully deployed."
     - ver=$(date +'%Y%m%d.%H%M%S')
-    - mc ./algbin.tar.gz ydn/gitlab-runner/iss-alg/algbin-${ver}.tar.gz
+    - mc cp ./algbin.tar.gz ydn/gitlab-runner/iss-alg/algbin-${ver}.tar.gz
