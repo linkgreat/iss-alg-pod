@@ -51,7 +51,7 @@ class ClassifierModel:
                 sys.stdout.flush()
 
     def process_image(self, message, img):
-        params = message["params"]
+        params = message.get("params", {})
 
         resize = params.get('resize', [1280, 720])
         if len(resize) < 2:
