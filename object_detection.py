@@ -12,7 +12,7 @@ from mqtt_client import MqttSession
 class ClassifierModel:
     def __init__(self, alg_name, args):
         self.name = alg_name
-        target_url = '{}/api/iss/topic.root'.format(args.addr)
+        target_url = '{}/api/topic.root'.format(args.addr)
         response = requests.get(target_url)
         if response.status_code == 200 and response.text:
             self.topic = '$share/{0}/{1}/alg/{0}'.format(alg_name, response.text)
