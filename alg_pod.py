@@ -24,7 +24,6 @@ parser.add_argument('--mqtt-addr', help='mqtt地址', default='172.16.1.12')
 parser.add_argument('--mqtt-port', type=int, help='mqtt地址', default=1883)
 parser.add_argument('--mqtt-un', help='mqtt用户', default="test")
 parser.add_argument('--mqtt-pw', help='mqtt密码', default="test1234")
-parser.add_argument('--mqtt-topic', help='mqtt主题', default='narnia/alg/#')
 
 subparsers = parser.add_subparsers(help='子命令')
 load_detect(subparsers)

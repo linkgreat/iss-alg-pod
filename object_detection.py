@@ -1,4 +1,5 @@
 import sys
+import time
 from pathlib import Path
 
 import cv2
@@ -11,7 +12,12 @@ from mqtt_client import MqttSession
 class ClassifierModel:
     def __init__(self, alg_name, args):
         self.name = alg_name
-        self.topic = '$share/{0}/narnia/alg/{0}'.format(alg_name)
+        target_url = '{}/api/iss/topic.root'.format(args.addr)
+        response = requests.get(target_url)
+        if response.status_code == 200 and response.text:
+            self.topic = '$share/{0}/{1}/alg/{0}'.format(alg_name, response.text)
+        else:
+            raise ValueError("topic root not found")
         conf_path = Path(args.model_path)
         model_cfg = conf_path / "{}.cfg".format(args.model_name)
         model_param = conf_path / "{}.weights".format(args.model_name)
@@ -31,12 +37,29 @@ class ClassifierModel:
     def process(self, message):
         task_id = message['taskId']
         img_url = self.args.addr + "/storage/" + message['bucket'] + '/' + message['imgPath']
-        img_data = requests.get(img_url).content
-        img = cv2.imdecode(np.frombuffer(img_data, np.uint8), cv2.IMREAD_COLOR)
+        try:
+            img_data = requests.get(img_url).content
+            retry = 3
+            while len(img_data) < 1024 and retry > 0:
+                print("no image wait 50ms")
+                time.sleep(0.05)
+                img_data = requests.get(img_url).content
+                retry = retry - 1
+            if len(img_data) < 1024:
+                print("image cannot be downloaded:{}", img_url)
+                return
+            img = cv2.imdecode(np.frombuffer(img_data, np.uint8), cv2.IMREAD_COLOR)
+        except Exception as e:
+            print("获取图像错误:", str(e))
+            sys.stdout.flush()
+            return
 
+        if img is None:
+            print("image cannot be downloaded:{}", img_url)
+            return
         # 这里可以添加图像处理逻辑
         alg_result = self.process_image(message, img)  # 假设这是你的图像处理函数
-        if len(alg_result["classResults"]) > 0:
+        if alg_result is not None and len(alg_result["classResults"]) > 0:
             # 上传结果
             target_url = '{}/api/iss/alarm/task/{}/job/{}/result'.format(self.args.addr, task_id, self.name)
             try:
@@ -54,9 +77,11 @@ class ClassifierModel:
         params = message.get("params", {})
 
         resize = params.get('resize', [1280, 720])
+
         if len(resize) < 2:
             resize = [1280, 720]
         frame = cv2.resize(img, (resize[0], resize[1]))
+
         alg_result = {
             "tid": int(message['taskId']),
             "alg": self.name,
@@ -134,6 +159,7 @@ def load(subparsers, alg_name):
     parser.add_argument('--scale', type=float, help='param scale', default=1 / 255)
 
     def handle_args(args):
+
         alg = ClassifierModel(alg_name, args)
         session = MqttSession(alg)
         session.run()
