@@ -1,4 +1,4 @@
-FROM f7star/python-cv AS prepare
+FROM f7star/python:3.18.8-slim AS prepare
 LABEL authors="fjw"
 
 WORKDIR /scripts
