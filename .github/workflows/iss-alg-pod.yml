@@ -26,7 +26,6 @@ jobs:
         images: f7star/iss-alg-pod
         tags: |
           type=raw,value=latest
-          type=ref,event=push
 
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v2
