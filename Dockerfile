@@ -3,7 +3,7 @@ LABEL authors="fjw"
 
 WORKDIR /scripts
 COPY . .
-RUN pip install -r requrirements.txt
+RUN pip install -r requirements.txt
 
 
 ENTRYPOINT ["top", "-b"]
