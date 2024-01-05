@@ -11,7 +11,7 @@ from mqtt_client import MqttSession
 
 def match_roi(pt, poly):
     if len(poly) > 0 and len(pt) > 0:
-        contour = np.array(poly)
+        contour = np.array(poly, dtype=np.float32)
         inside = cv2.pointPolygonTest(contour, pt, False)
         return inside >= 0
     return False
@@ -133,7 +133,7 @@ class ClassifierModel:
             else:
                 matched = False
             if matched:
-                pt = (x + w / 2, y + h / 2)
+                pt = ((x + w / 2)/width, (y + h / 2)/height)
                 exclude = match_areas(pt, exclude_areas, False)
                 if exclude:
                     matched = False
