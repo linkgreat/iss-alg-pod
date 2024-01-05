@@ -9,6 +9,25 @@ import requests
 from mqtt_client import MqttSession
 
 
+def match_roi(pt, poly):
+    if len(poly) > 0 and len(pt) > 0:
+        contour = np.array(poly)
+        inside = cv2.pointPolygonTest(contour, pt, False)
+        return inside >= 0
+    return False
+
+
+def match_areas(pt, areas, default_value):
+    if len(areas) == 0:
+        return default_value
+    else:
+        for poly in areas:
+            ret = match_roi(pt, poly)
+            if ret:
+                return ret
+        return False
+
+
 class ClassifierModel:
     def __init__(self, alg_name, args):
         self.name = alg_name
@@ -98,6 +117,10 @@ class ClassifierModel:
         class_results = []
         conf_threshold = params.get('confThreshold', 0.5)
         nms_threshold = params.get('nmsThreshold', 0.3)
+        roi = params.get('roi', {})
+        include_areas = roi.get('includeAreas', [])
+        exclude_areas = roi.get('excludeAreas', [])
+
         print("conf_threshold={0} nms_threshold={1}".format(conf_threshold, nms_threshold))
         classids, scores, bboxes = self.model.detect(frame, conf_threshold, nms_threshold)
         for class_id, score, bbox in zip(classids, scores, bboxes):
@@ -109,6 +132,16 @@ class ClassifierModel:
                 matched = any(class_name == s for s in params['classes'])
             else:
                 matched = False
+            if matched:
+                pt = (x + w / 2, y + h / 2)
+                exclude = match_areas(pt, exclude_areas, False)
+                if exclude:
+                    matched = False
+                else:
+                    include = match_areas(pt, include_areas, True)
+                    if not include:
+                        matched = False
+
             class_results.append({
                 "id": int(class_id),
                 "name": class_name,
@@ -159,7 +192,6 @@ def load(subparsers, alg_name):
     parser.add_argument('--scale', type=float, help='param scale', default=1 / 255)
 
     def handle_args(args):
-
         alg = ClassifierModel(alg_name, args)
         session = MqttSession(alg)
         session.run()
