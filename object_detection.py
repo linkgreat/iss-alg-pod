@@ -133,7 +133,7 @@ class ClassifierModel:
             else:
                 matched = False
             if matched:
-                pt = ((x + w / 2)/width, (y + h / 2)/height)
+                pt = ((x + w / 2) / width, (y + h / 2) / height)
                 exclude = match_areas(pt, exclude_areas, False)
                 if exclude:
                     matched = False
@@ -154,19 +154,34 @@ class ClassifierModel:
                 },
                 "matched": matched,
             })
-        matched_count = len([obj for obj in class_results if obj["matched"]])
-        min_alarm_flag = matched_count > 0
-        max_alarm_flag = True
-        min_count = params.get('minObjectCount', None)
-        max_count = params.get('maxObjectCount', None)
-        if min_count is not None:
-            min_alarm_flag = matched_count >= min_count
-        if max_count is not None:
-            max_alarm_flag = matched_count < max_count
 
-        alarm_flag = min_alarm_flag & max_alarm_flag
         alg_result["classResults"] = class_results
-        alg_result["alarmFlag"] = alarm_flag
+        if self.name == "helmet":
+            # 安全帽算法逻辑
+            class_counts = {}
+            for item in class_results:
+                name = item['name']
+                if name in class_counts:
+                    class_counts[name] += 1
+                else:
+                    class_counts[name] = 1
+            person_count = class_counts.get("person", 0)
+            helmet_count = class_counts.get("helmet", 0)
+            if person_count > 0 and (person_count - helmet_count) > 0:
+                alg_result["alarmFlag"] = True
+        else:
+            # 其他算法告警逻辑
+            matched_count = len([obj for obj in class_results if obj["matched"]])
+            min_alarm_flag = matched_count > 0
+            max_alarm_flag = True
+            min_count = params.get('minObjectCount', None)
+            max_count = params.get('maxObjectCount', None)
+            if min_count is not None:
+                min_alarm_flag = matched_count >= min_count
+            if max_count is not None:
+                max_alarm_flag = matched_count < max_count
+            alarm_flag = min_alarm_flag & max_alarm_flag
+            alg_result["alarmFlag"] = alarm_flag
 
         print(alg_result)
         sys.stdout.flush()
