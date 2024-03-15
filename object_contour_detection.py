@@ -33,7 +33,7 @@ class OverlapDetectContext:
         self.alarm_time = None
         self.rects = []
         self.prev_img_path = None
-        for i in range(16):
+        for i in range(32):
             self.rects.append((0, 0, 0, 0))
 
     def proc_param(self, params):
@@ -93,6 +93,8 @@ class OverlapDetectContext:
                 continue
             contour_point.append((x, y, w, h))
             for j in range(len(contour_point)):
+                if j > len(self.rects):
+                    break
                 cx = contour_point[j][0]
                 cy = contour_point[j][1]
                 cw = contour_point[j][2]
