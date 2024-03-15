@@ -31,7 +31,7 @@ class OverlapDetectContext:
         self.prev_frame = None
         self.prev_time = None
         self.rects = []
-        self.prev_img_url = None
+        self.prev_img_path = None
         for i in range(16):
             self.rects.append((0, 0, 0, 0))
 
@@ -59,19 +59,20 @@ class OverlapDetectContext:
                 return False
             return True
 
-    def process_contours(self, message, img, img_url):
+    def process_contours(self, message, img, img_path):
         params = message.get("params", {})
         self.proc_param(params)
         frame = cv2.resize(img, (self.resize[0], self.resize[1]))
         gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         gray_frame = cv2.GaussianBlur(gray_frame, (3, 3), 0)
         if not self.check_prev_frame():
-            self.prev_img_url = img_url
+            self.prev_img_path = img_path
             self.prev_frame = gray_frame
             self.prev_time = time.time()
             return []
-        contour_results = self.calc_overlap_contours_v1(gray_frame, img_url)
+        contour_results = self.calc_overlap_contours_v1(gray_frame, img_path)
         return contour_results
+
 
     def calc_overlap_contours(self, gray_frame):
         current_time = time.time()
@@ -156,7 +157,7 @@ class OverlapDetectContext:
             self.prev_time = current_time
         return contour_results
 
-    def calc_overlap_contours_v1(self, gray_frame, img_url):
+    def calc_overlap_contours_v1(self, gray_frame, img_path):
         current_time = time.time()
         elapsed_time = current_time - self.prev_time
         contour_point = []
@@ -220,7 +221,7 @@ class OverlapDetectContext:
         if len(contour_results) == 0 or elapsed_time >= 15:
             self.prev_frame = gray_frame
             self.prev_time = current_time
-            self.prev_img_url = img_url
+            self.prev_img_path = img_path
         return contour_results
 
 
@@ -239,6 +240,7 @@ class OccupancyDetector(ClassifierModel):
     def process(self, message):
         params = message.get("params", {})
         task_id = message['taskId']
+        img_path = message['imgPath']
         img_url = self.args.addr + "/storage/" + message['bucket'] + '/' + message['imgPath']
         img = fetch_image(img_url)
         if img is None:
@@ -247,7 +249,7 @@ class OccupancyDetector(ClassifierModel):
         ctx = self.get_channel_ctx(task_id)
         alg_result = self.process_image(message, img)
         alg_result["classResults"] = []
-        contour_results = ctx.process_contours(message, img)
+        contour_results = ctx.process_contours(message, img, img_path)
         alg_result["contourResults"] = contour_results
         threshold = params.get('overlapThreshold', 0.66)
         for contour in contour_results:
@@ -266,7 +268,7 @@ class OccupancyDetector(ClassifierModel):
         print("max overlap percent:{}".format(maxOverlapPercent))
         if maxOverlapPercent >= threshold:
             alg_result["alarmFlag"] = True
-            alg_result["prevImgUrl"] = ctx.prev_img_url
+            alg_result["prevImgPath"] = ctx.prev_img_path
 
         # 这里可以添加图像处理逻辑
         # alg_result = self.process_image(message, img)  # 假设这是你的图像处理函数
