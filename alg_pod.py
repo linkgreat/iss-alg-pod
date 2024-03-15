@@ -2,10 +2,13 @@ import argparse
 import signal
 import sys
 
+from alg_loader import load
+
+
 # from alg_electric_bike import load_electric_bike
 # from alg_helmet import load_helmet
 # from alg_outdoor import load_outdoor  # 导入 out_door 函数
-from object_detection import load_detect
+
 
 
 def graceful_exit(signum, frame):
@@ -26,7 +29,7 @@ parser.add_argument('--mqtt-un', help='mqtt用户', default="test")
 parser.add_argument('--mqtt-pw', help='mqtt密码', default="test1234")
 
 subparsers = parser.add_subparsers(help='子命令')
-load_detect(subparsers)
+load(subparsers)
 
 args = parser.parse_args()
 

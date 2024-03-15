@@ -1,12 +1,11 @@
 import sys
-import time
 from pathlib import Path
 
 import cv2
 import numpy as np
 import requests
 
-from mqtt_client import MqttSession
+from common import fetch_image
 
 
 def match_roi(pt, poly):
@@ -56,23 +55,7 @@ class ClassifierModel:
     def process(self, message):
         task_id = message['taskId']
         img_url = self.args.addr + "/storage/" + message['bucket'] + '/' + message['imgPath']
-        try:
-            img_data = requests.get(img_url).content
-            retry = 3
-            while len(img_data) < 1024 and retry > 0:
-                print("no image wait 50ms")
-                time.sleep(0.05)
-                img_data = requests.get(img_url).content
-                retry = retry - 1
-            if len(img_data) < 1024:
-                print("image cannot be downloaded:{}", img_url)
-                return
-            img = cv2.imdecode(np.frombuffer(img_data, np.uint8), cv2.IMREAD_COLOR)
-        except Exception as e:
-            print("获取图像错误:", str(e))
-            sys.stdout.flush()
-            return
-
+        img = fetch_image(img_url)
         if img is None:
             print("image cannot be downloaded:{}", img_url)
             return
@@ -188,36 +171,3 @@ class ClassifierModel:
         return alg_result
 
 
-alg_dict = {
-    "outdoor": "室外检测",
-    "indoor": "室内检测",
-    "person": "人员聚集",
-    "helmet": "安全帽检测",
-    "electric_bike": "电动车检测"
-}
-
-
-def load(subparsers, alg_name):
-    help_text = alg_dict.get(alg_name, "未知")
-    parser = subparsers.add_parser(alg_name, help=help_text)
-    parser.add_argument('--model-path', help='模型路径', default="./{}".format(alg_name))
-    parser.add_argument('--model-name', help='模型名称', default=alg_name)
-    parser.add_argument('--size-w', type=int, help='param size w', default=320)
-    parser.add_argument('--size-h', type=int, help='param size h', default=320)
-    parser.add_argument('--scale', type=float, help='param scale', default=1 / 255)
-
-    def handle_args(args):
-        alg = ClassifierModel(alg_name, args)
-        session = MqttSession(alg)
-        session.run()
-
-    parser.set_defaults(func=handle_args)
-
-
-def load_detect(subparsers):
-    parser = subparsers.add_parser("detect", help='目标分类检测算法')
-    classify_sub = parser.add_subparsers(help='分类检测子算法')
-    load(classify_sub, "outdoor")
-    load(classify_sub, "person")
-    load(classify_sub, "helmet")
-    load(classify_sub, "electric_bike")
