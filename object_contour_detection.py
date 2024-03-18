@@ -104,15 +104,34 @@ class OverlapDetectContext:
                 py = self.rects[j][1]
                 pw = self.rects[j][2]
                 ph = self.rects[j][3]
+                intersection_area0 = 0
 
                 deltax = abs((cx + cw / 2) - (px + pw / 2))
                 deltay = abs((cy + ch / 2) - (py + ph / 2))
-                overlap_percent = 0.0
-                if deltax < 20 and deltay < 20:
+                if deltax < 1 and deltay < 1:
+                    points0 = [pt[0] for pt in c]  # 提取点
+                    shape0 = Polygon(points0)  # 创建多边形
+                    if shape0.is_valid:
+                        for roi_poly in self.include_areas:
+                            poly = Polygon(roi_poly)
+                            if poly.area > 0:
+                                intersection_area0 += poly.intersection(shape0).area
+                if intersection_area0 > 20:
                     print("出现障碍物")
-
-                    if len(c) >= 3:  # 确保至少有三个点
-                        points = [pt[0] for pt in c]  # 提取点
+                    crop_img = gray_frame[cy:cy + ch, cx:cx + cw]
+                    prev_crop_img = self.prev_frame[cy:cy + ch, cx:cx + cw]
+                    (crop_score, crop_diff) = compare_ssim(prev_crop_img, crop_img, full=True)
+                    crop_diff = (crop_diff * 255).astype("uint8")
+                    crop_thresh = cv2.threshold(crop_diff, 120, 255, cv2.THRESH_BINARY_INV)[1]
+                    crop_contours, crop_hierarchy = cv2.findContours(crop_thresh.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+                    print(f"crop_SSIM:{crop_score}")
+                    for cc in crop_contours:
+                        if cv2.contourArea(cc) < 10 or len(cc) <= 3:
+                            continue
+                        points = [(pt[0][0] + cx, pt[0][1] + cy) for pt in cc]  # 提取点
+                        (ccx, ccy, ccw, cch) = cv2.boundingRect(cc)
+                        ccx += cx
+                        ccy += cy
                         points.append(points[0])  # 添加第一个点到末尾以闭合多边形
                         shape = Polygon(points)  # 创建多边形
                         if shape.is_valid:
@@ -129,10 +148,10 @@ class OverlapDetectContext:
                             contour_results.append({
                                 "id": int(j),
                                 "bBox": {
-                                    "x": float(x / self.resize[0]),
-                                    "y": float(y / self.resize[1]),
-                                    "w": float(w / self.resize[0]),
-                                    "h": float(h / self.resize[1]),
+                                    "x": float(ccx / self.resize[0]),
+                                    "y": float(ccy / self.resize[1]),
+                                    "w": float(ccw / self.resize[0]),
+                                    "h": float(cch / self.resize[1]),
                                 },
                                 "overlapPercent": max_percent,
                                 "matched": False,
