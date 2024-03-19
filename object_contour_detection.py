@@ -112,15 +112,14 @@ class OverlapDetectContext:
             if deltax < 1 and deltay < 1:
                 points0 = [pt[0] for pt in c]  # 提取点
                 shape0 = Polygon(points0)  # 创建多边形
-                if shape0.is_valid:
-                    for roi_poly in self.include_areas:
-                        poly = Polygon(roi_poly)
-                        if poly.area > 0:
-                            intersection_area0 += poly.intersection(shape0).area
+                for roi_poly in self.include_areas:
+                    poly = Polygon(roi_poly)
+                    if poly.area > 0:
+                        intersection_area0 += poly.intersection(shape0).area
             else:
                 self.rects[j] = (cx, cy, cw, ch)
 
-            if True or intersection_area0 > 20:
+            if intersection_area0 > 10:
                 print("出现障碍物")
                 crop_img = gray_frame[cy:cy + ch, cx:cx + cw]
                 prev_crop_img = self.prev_frame[cy:cy + ch, cx:cx + cw]
@@ -148,17 +147,18 @@ class OverlapDetectContext:
                                 print('contour overlap percent:{}'.format(percent))
                             percents.append(percent)
                     max_percent = max(percent for percent in percents)
-                    contour_results.append({
-                        "id": int(j),
-                        "bBox": {
-                            "x": float(ccx / self.resize[0]),
-                            "y": float(ccy / self.resize[1]),
-                            "w": float(ccw / self.resize[0]),
-                            "h": float(cch / self.resize[1]),
-                        },
-                        "overlapPercent": max_percent,
-                        "matched": False,
-                    })
+                    if max_percent > 0:
+                        contour_results.append({
+                            "id": int(j),
+                            "bBox": {
+                                "x": float(ccx / self.resize[0]),
+                                "y": float(ccy / self.resize[1]),
+                                "w": float(ccw / self.resize[0]),
+                                "h": float(cch / self.resize[1]),
+                            },
+                            "overlapPercent": max_percent,
+                            "matched": False,
+                        })
             else:
                 self.rects[j] = (cx, cy, cw, ch)
 
