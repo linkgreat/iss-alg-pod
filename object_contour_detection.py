@@ -74,7 +74,7 @@ class OverlapDetectContext:
             self.prev_frame = gray_frame
             self.prev_time = time.time()
             return []
-        contour_results = self.calc_overlap_contours_v1(gray_frame, img_path)
+        contour_results = self.calc_overlap_contours_v2(gray_frame, img_path)
         return contour_results
 
     def calc_overlap_contours_v1(self, gray_frame, img_path):
@@ -166,6 +166,75 @@ class OverlapDetectContext:
                 self.rects[j] = (cx, cy, cw, ch)
 
         if len(contour_results) == 0 and self.get_elapsed_time() >= 15:
+            self.prev_frame = gray_frame
+            self.prev_time = current_time
+            self.prev_img_path = img_path
+        return contour_results
+
+    def calc_overlap_contours_v2(self, gray_frame, img_path):
+        current_time = time.time()
+        (score, diff) = compare_ssim(self.prev_frame, gray_frame, win_size=91, full=True)
+        diff = (diff * 255).astype("uint8")
+        print("SSIM:{}".format(score))
+        thresh = cv2.threshold(diff, 120, 255, cv2.THRESH_BINARY_INV)[1]
+        contours, hierarchy = cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        contour_results = []
+        for j, c in enumerate(contours):
+            (cx, cy, cw, ch) = cv2.boundingRect(c)
+            if cw < 20 or ch < 20:
+                continue
+            intersection_area0 = 0
+            points0 = [pt[0] for pt in c]  # 提取点
+            shape0 = Polygon(points0)  # 创建多边形
+            for roi_poly in self.include_areas:
+                poly = Polygon(roi_poly)
+                if poly.area > 0:
+                    intersection_area0 += poly.intersection(shape0).area
+
+            if intersection_area0 > 10:
+                print("出现障碍物")
+                crop_img = gray_frame[cy:cy + ch, cx:cx + cw]
+                prev_crop_img = self.prev_frame[cy:cy + ch, cx:cx + cw]
+                (crop_score, crop_diff) = compare_ssim(prev_crop_img, crop_img, full=True)
+                crop_diff = (crop_diff * 255).astype("uint8")
+                crop_thresh = cv2.threshold(crop_diff, 120, 255, cv2.THRESH_BINARY_INV)[1]
+                crop_contours, crop_hierarchy = cv2.findContours(crop_thresh.copy(), cv2.RETR_EXTERNAL,
+                                                                 cv2.CHAIN_APPROX_SIMPLE)
+                print(f"crop_SSIM:{crop_score}")
+                for cc in crop_contours:
+                    if cv2.contourArea(cc) < 10 or len(cc) <= 3:
+                        continue
+                    points = [(pt[0][0] + cx, pt[0][1] + cy) for pt in cc]  # 提取点
+                    (ccx, ccy, ccw, cch) = cv2.boundingRect(cc)
+                    ccx += cx
+                    ccy += cy
+                    points.append(points[0])  # 添加第一个点到末尾以闭合多边形
+                    shape = Polygon(points)  # 创建多边形
+                    percents = []
+                    for roi_poly in self.include_areas:
+                        poly = Polygon(roi_poly)
+                        if poly.area > 0:
+                            intersection_area = poly.intersection(shape).area
+                            percent = intersection_area / poly.area
+                            if percent > 0:
+                                print('contour overlap percent:{}'.format(percent))
+                            percents.append(percent)
+                    max_percent = max(percent for percent in percents)
+                    if max_percent > 0:
+                        contour_results.append({
+                            "id": int(j),
+                            "bBox": {
+                                "x": float(ccx / self.resize[0]),
+                                "y": float(ccy / self.resize[1]),
+                                "w": float(ccw / self.resize[0]),
+                                "h": float(cch / self.resize[1]),
+                            },
+                            "overlapPercent": max_percent,
+                            "matched": False,
+                        })
+                        self.prev_time = current_time
+
+        if self.get_elapsed_time() >= 15:
             self.prev_frame = gray_frame
             self.prev_time = current_time
             self.prev_img_path = img_path
