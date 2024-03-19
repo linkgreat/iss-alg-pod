@@ -109,13 +109,14 @@ class OverlapDetectContext:
 
             deltax = abs((cx + cw / 2) - (px + pw / 2))
             deltay = abs((cy + ch / 2) - (py + ph / 2))
+            points0 = [pt[0] for pt in c]  # 提取点
+            shape0 = Polygon(points0)  # 创建多边形
+            for roi_poly in self.include_areas:
+                poly = Polygon(roi_poly)
+                if poly.area > 0:
+                    intersection_area0 += poly.intersection(shape0).area
             if deltax < 1 and deltay < 1:
-                points0 = [pt[0] for pt in c]  # 提取点
-                shape0 = Polygon(points0)  # 创建多边形
-                for roi_poly in self.include_areas:
-                    poly = Polygon(roi_poly)
-                    if poly.area > 0:
-                        intersection_area0 += poly.intersection(shape0).area
+                print('delta < 1')
             else:
                 self.rects[j] = (cx, cy, cw, ch)
 
@@ -126,7 +127,8 @@ class OverlapDetectContext:
                 (crop_score, crop_diff) = compare_ssim(prev_crop_img, crop_img, full=True)
                 crop_diff = (crop_diff * 255).astype("uint8")
                 crop_thresh = cv2.threshold(crop_diff, 120, 255, cv2.THRESH_BINARY_INV)[1]
-                crop_contours, crop_hierarchy = cv2.findContours(crop_thresh.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+                crop_contours, crop_hierarchy = cv2.findContours(crop_thresh.copy(), cv2.RETR_EXTERNAL,
+                                                                 cv2.CHAIN_APPROX_SIMPLE)
                 print(f"crop_SSIM:{crop_score}")
                 for cc in crop_contours:
                     if cv2.contourArea(cc) < 10 or len(cc) <= 3:
@@ -159,6 +161,7 @@ class OverlapDetectContext:
                             "overlapPercent": max_percent,
                             "matched": False,
                         })
+                        self.prev_time = current_time
             else:
                 self.rects[j] = (cx, cy, cw, ch)
 
@@ -225,7 +228,7 @@ class OccupancyDetector(ClassifierModel):
         # alg_result = self.process_image(message, img)  # 假设这是你的图像处理函数
         now = time.time()
         if alg_result is not None and alg_result["maxOverlapPercent"] is not None:
-            if not alarm_flag or ctx.alarm_time is None or now - ctx.alarm_time >= alarm_interval / 4:
+            if True:  # not alarm_flag or ctx.alarm_time is None or now - ctx.alarm_time >= alarm_interval / 4:
                 # 上传结果
                 target_url = '{}/api/iss/alarm/task/{}/job/{}/result'.format(self.args.addr, task_id, self.name)
                 try:
