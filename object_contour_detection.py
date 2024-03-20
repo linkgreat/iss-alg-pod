@@ -20,6 +20,32 @@ def calc_roi_intersection(poly0, poly1):
     return 0
 
 
+def calculate_result_similarity(item1, item2):
+    # 定义权重
+    weights = {'position': 0.4, 'size': 0.4, 'overlapPercent': 0.2}
+
+    # 计算位置相似性
+    position_diff = ((item1['bBox']['x'] - item2['bBox']['x']) ** 2 +
+                     (item1['bBox']['y'] - item2['bBox']['y']) ** 2) ** 0.5
+    position_similarity = max(0, 1 - position_diff)  # 假设差异为0时完全相同，随差异增大逐渐减少到0
+
+    # 计算大小相似性
+    size_diff = ((item1['bBox']['w'] - item2['bBox']['w']) ** 2 +
+                 (item1['bBox']['h'] - item2['bBox']['h']) ** 2) ** 0.5
+    size_similarity = max(0, 1 - size_diff)
+
+    # 计算重叠百分比相似性
+    overlap_diff = abs(item1['overlapPercent'] - item2['overlapPercent'])
+    overlap_similarity = max(0, 1 - overlap_diff)
+
+    # 综合评分
+    total_similarity = (position_similarity * weights['position'] +
+                        size_similarity * weights['size'] +
+                        overlap_similarity * weights['overlapPercent'])
+
+    return total_similarity
+
+
 class OverlapDetectContext:
     def __init__(self, name, task_id):
         self.name = name
@@ -31,6 +57,7 @@ class OverlapDetectContext:
         self.prev_frame = None
         self.prev_time = None
         self.alarm_time = None
+        self.prev_contour_results = []
         self.rects = []
         self.prev_img_path = None
         for i in range(32):
@@ -63,8 +90,14 @@ class OverlapDetectContext:
     def get_elapsed_time(self):
         return time.time() - self.prev_time
 
+    def get_alarm_duration(self):
+        if self.alarm_time is None:
+            return 0
+        return time.time() - self.alarm_time
+
     def process_contours(self, message, img, img_path):
         params = message.get("params", {})
+        alarm_interval = params.get('alarmInterval', 60)
         self.proc_param(params)
         frame = cv2.resize(img, (self.resize[0], self.resize[1]))
         gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -74,7 +107,13 @@ class OverlapDetectContext:
             self.prev_frame = gray_frame
             self.prev_time = time.time()
             return []
-        contour_results = self.calc_overlap_contours_v2(gray_frame, img_path)
+        contour_results = self.calc_overlap_contours_v2(gray_frame)
+        max_alarm_duration = max(alarm_interval / 2, 15)
+        if self.get_elapsed_time() >= 15 or self.get_alarm_duration() >= max_alarm_duration:
+            current_time = time.time()
+            self.prev_frame = gray_frame
+            self.prev_time = current_time
+            self.prev_img_path = img_path
         return contour_results
 
     def calc_overlap_contours_v1(self, gray_frame, img_path):
@@ -171,7 +210,7 @@ class OverlapDetectContext:
             self.prev_img_path = img_path
         return contour_results
 
-    def calc_overlap_contours_v2(self, gray_frame, img_path):
+    def calc_overlap_contours_v2(self, gray_frame):
         current_time = time.time()
         (score, diff) = compare_ssim(self.prev_frame, gray_frame, win_size=91, full=True)
         diff = (diff * 255).astype("uint8")
@@ -185,7 +224,14 @@ class OverlapDetectContext:
                 continue
             intersection_area0 = 0
             points0 = [pt[0] for pt in c]  # 提取点
+            points0.append(points0[0])  # 添加第一个点到末尾以闭合多边形
             shape0 = Polygon(points0)  # 创建多边形
+            if not shape0.is_valid:
+                print('shape0 is not valid')
+                shape0 = shape0.buffer(0)
+                if not shape0.is_valid:
+                    print('shape0 is still not valid, will be ignored')
+                    continue
             for roi_poly in self.include_areas:
                 poly = Polygon(roi_poly)
                 if poly.area > 0:
@@ -201,7 +247,7 @@ class OverlapDetectContext:
                 crop_contours, crop_hierarchy = cv2.findContours(crop_thresh.copy(), cv2.RETR_EXTERNAL,
                                                                  cv2.CHAIN_APPROX_SIMPLE)
                 print(f"crop_SSIM:{crop_score}")
-                for cc in crop_contours:
+                for jj, cc in enumerate(crop_contours):
                     if cv2.contourArea(cc) < 10 or len(cc) <= 3:
                         continue
                     points = [(pt[0][0] + cx, pt[0][1] + cy) for pt in cc]  # 提取点
@@ -210,6 +256,13 @@ class OverlapDetectContext:
                     ccy += cy
                     points.append(points[0])  # 添加第一个点到末尾以闭合多边形
                     shape = Polygon(points)  # 创建多边形
+                    if not shape0.is_valid:
+                        print('shape is not valid')
+                        shape = shape.buffer(0)
+                        if not shape.is_valid:
+                            print('shape is still not valid, will be ignored')
+                            continue
+
                     percents = []
                     for roi_poly in self.include_areas:
                         poly = Polygon(roi_poly)
@@ -232,13 +285,19 @@ class OverlapDetectContext:
                             "overlapPercent": max_percent,
                             "matched": False,
                         })
-                        self.prev_time = current_time
-
-        if self.get_elapsed_time() >= 15:
-            self.prev_frame = gray_frame
+        results = []
+        if 0 < len(contour_results) == len(self.prev_contour_results):
+            for i, cr in enumerate(contour_results):
+                pcr = self.prev_contour_results[i]
+                score = calculate_result_similarity(cr, pcr)
+                print(f"Similarity score: {score}")
+                if score > 0.95:
+                    results.append(cr)
+        elif len(contour_results) > 0 == len(self.prev_contour_results):
             self.prev_time = current_time
-            self.prev_img_path = img_path
-        return contour_results
+
+        self.prev_contour_results = contour_results
+        return results
 
 
 class OccupancyDetector(ClassifierModel):
@@ -288,14 +347,19 @@ class OccupancyDetector(ClassifierModel):
         alg_result["maxOverlapPercent"] = maxOverlapPercent
         print("max overlap percent:{} / threshold: {}".format(maxOverlapPercent, threshold))
         alarm_flag = False
+        now = time.time()
         if maxOverlapPercent >= threshold:
             alarm_flag = True
+            ctx.prev_time = now
+            if ctx.alarm_time is None:
+                ctx.alarm_time = now
             alg_result["alarmFlag"] = True
             alg_result["prevImgPath"] = prev_img_url
+        else:
+            ctx.alarm_time = None
 
         # 这里可以添加图像处理逻辑
         # alg_result = self.process_image(message, img)  # 假设这是你的图像处理函数
-        now = time.time()
         if alg_result is not None and alg_result["maxOverlapPercent"] is not None:
             if True:  # not alarm_flag or ctx.alarm_time is None or now - ctx.alarm_time >= alarm_interval / 4:
                 # 上传结果
@@ -307,7 +371,7 @@ class OccupancyDetector(ClassifierModel):
                     else:
                         print("上传失败，状态码:", response.status_code)
                     sys.stdout.flush()
-                    ctx.alarm_time = now
+
                 except Exception as e:
                     print("上传出错:", str(e))
                     sys.stdout.flush()
