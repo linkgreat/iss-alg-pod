@@ -286,13 +286,13 @@ class OverlapDetectContext:
                             "matched": False,
                         })
         results = []
-        if 0 < len(contour_results) == len(self.prev_contour_results):
-            for i, cr in enumerate(contour_results):
-                pcr = self.prev_contour_results[i]
-                score = calculate_result_similarity(cr, pcr)
-                print(f"Similarity score: {score}")
-                if score > 0.95:
-                    results.append(cr)
+        if len(contour_results) > 0 and len(self.prev_contour_results) > 0:
+            for cr in contour_results:
+                for pcr in self.prev_contour_results:
+                    score = calculate_result_similarity(cr, pcr)
+                    print(f"Similarity score: {score}")
+                    if score > 0.95:
+                        results.append(cr)
         elif len(contour_results) > 0 == len(self.prev_contour_results):
             self.prev_time = current_time
 
